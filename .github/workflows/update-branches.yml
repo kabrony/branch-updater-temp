@@ -1,0 +1,52 @@
+name: Update Branches
+
+on:
+  # Run on push to main branch
+  push:
+    branches: [ main ]
+  
+  # Run on schedule (daily at midnight UTC)
+  schedule:
+    - cron: '0 0 * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      repositories:
+        description: 'Repositories to update (comma-separated)'
+        required: true
+        default: 'qmcs,VOTS,vot1'
+      branches:
+        description: 'Branches to update (comma-separated)'
+        required: true
+        default: 'dev,testing,feature/updates'
+
+jobs:
+  update-branches:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Git
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+      
+      - name: Make script executable
+        run: chmod +x ./branch-updater.sh
+      
+      - name: Update branches (manual trigger)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./branch-updater.sh --repos ${{ github.event.inputs.repositories }} --branches ${{ github.event.inputs.branches }}
+      
+      - name: Update branches (automated)
+        if: github.event_name != 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./branch-updater.sh --all
